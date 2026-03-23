@@ -87,8 +87,9 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 // --- Main App Component ---
+const DEFAULT_USER_ID = 'brighthouse-admin';
+
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -98,16 +99,17 @@ export default function App() {
   const [showModal, setShowModal] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  // --- Auth & Initial Sync ---
+  // Mock user for UI consistency
+  const mockUser = {
+    displayName: 'BrightHouse Admin',
+    email: 'admin@brighthouse.media',
+    photoURL: 'https://ui-avatars.com/api/?name=BrightHouse+Admin&background=ec4899&color=fff'
+  };
+
+  // --- Initial Sync ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-      if (u) {
-        testConnection();
-      }
-    });
-    return () => unsubscribe();
+    testConnection();
+    setLoading(false);
   }, []);
 
   async function testConnection() {
@@ -121,17 +123,15 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!user) return;
-
     // Sync Profile
-    const profilePath = `profiles/${user.uid}`;
-    const unsubProfile = onSnapshot(doc(db, 'profiles', user.uid), (snap) => {
+    const profilePath = `profiles/${DEFAULT_USER_ID}`;
+    const unsubProfile = onSnapshot(doc(db, 'profiles', DEFAULT_USER_ID), (snap) => {
       if (snap.exists()) {
         setProfile({ id: snap.id, ...snap.data() } as Profile);
       } else {
         // Create default profile if not exists
         const defaultProfile: Profile = {
-          companyName: 'My Media Company',
+          companyName: 'BrightHouse Media',
           brandColor: '#ec4899',
           modelingMode: 'granular',
           billingCycle: 'monthly',
@@ -144,27 +144,27 @@ export default function App() {
           videoVendor: 'Standard',
           manualPhotoCost: 50,
           targetMarginFloor: 40,
-          ownerUid: user.uid
+          ownerUid: DEFAULT_USER_ID
         };
-        setDoc(doc(db, 'profiles', user.uid), defaultProfile).catch(e => handleFirestoreError(e, OperationType.WRITE, profilePath));
+        setDoc(doc(db, 'profiles', DEFAULT_USER_ID), defaultProfile).catch(e => handleFirestoreError(e, OperationType.WRITE, profilePath));
       }
     }, (e) => handleFirestoreError(e, OperationType.GET, profilePath));
 
     // Sync Packages
-    const packagesPath = `profiles/${user.uid}/packages`;
-    const unsubPackages = onSnapshot(collection(db, 'profiles', user.uid, 'packages'), (snap) => {
+    const packagesPath = `profiles/${DEFAULT_USER_ID}/packages`;
+    const unsubPackages = onSnapshot(collection(db, 'profiles', DEFAULT_USER_ID, 'packages'), (snap) => {
       setPackages(snap.docs.map(d => ({ id: d.id, ...d.data() } as Package)));
     }, (e) => handleFirestoreError(e, OperationType.GET, packagesPath));
 
     // Sync Upsells
-    const upsellsPath = `profiles/${user.uid}/upsells`;
-    const unsubUpsells = onSnapshot(collection(db, 'profiles', user.uid, 'upsells'), (snap) => {
+    const upsellsPath = `profiles/${DEFAULT_USER_ID}/upsells`;
+    const unsubUpsells = onSnapshot(collection(db, 'profiles', DEFAULT_USER_ID, 'upsells'), (snap) => {
       setUpsells(snap.docs.map(d => ({ id: d.id, ...d.data() } as Upsell)));
     }, (e) => handleFirestoreError(e, OperationType.GET, upsellsPath));
 
     // Sync Contractors
-    const contractorsPath = `profiles/${user.uid}/contractors`;
-    const unsubContractors = onSnapshot(collection(db, 'profiles', user.uid, 'contractors'), (snap) => {
+    const contractorsPath = `profiles/${DEFAULT_USER_ID}/contractors`;
+    const unsubContractors = onSnapshot(collection(db, 'profiles', DEFAULT_USER_ID, 'contractors'), (snap) => {
       setContractors(snap.docs.map(d => ({ id: d.id, ...d.data() } as Contractor)));
     }, (e) => handleFirestoreError(e, OperationType.GET, contractorsPath));
 
@@ -174,7 +174,7 @@ export default function App() {
       unsubUpsells();
       unsubContractors();
     };
-  }, [user]);
+  }, []);
 
   // --- Calculations ---
   const stats = useMemo<DashboardStats>(() => {
@@ -207,24 +207,13 @@ export default function App() {
   }, [packages, upsells, contractors]);
 
   // --- Handlers ---
-  const handleLogin = async () => {
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch (e) {
-      console.error('Login failed', e);
-    }
-  };
-
-  const handleLogout = () => signOut(auth);
-
   const saveItem = async (type: string, data: any) => {
-    if (!user) return;
-    const path = `profiles/${user.uid}/${type}`;
+    const path = `profiles/${DEFAULT_USER_ID}/${type}`;
     try {
       if (editingItem) {
-        await updateDoc(doc(db, 'profiles', user.uid, type, editingItem.id), data);
+        await updateDoc(doc(db, 'profiles', DEFAULT_USER_ID, type, editingItem.id), data);
       } else {
-        await addDoc(collection(db, 'profiles', user.uid, type), { ...data, profileId: user.uid });
+        await addDoc(collection(db, 'profiles', DEFAULT_USER_ID, type), { ...data, profileId: DEFAULT_USER_ID });
       }
       setShowModal(null);
       setEditingItem(null);
@@ -234,10 +223,9 @@ export default function App() {
   };
 
   const deleteItem = async (type: string, id: string) => {
-    if (!user) return;
-    const path = `profiles/${user.uid}/${type}/${id}`;
+    const path = `profiles/${DEFAULT_USER_ID}/${type}/${id}`;
     try {
-      await deleteDoc(doc(db, 'profiles', user.uid, type, id));
+      await deleteDoc(doc(db, 'profiles', DEFAULT_USER_ID, type, id));
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -250,29 +238,6 @@ export default function App() {
         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full"
       />
-    </div>
-  );
-
-  if (!user) return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="glass p-8 rounded-3xl max-w-md w-full text-center"
-      >
-        <div className="w-16 h-16 bg-pink-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <BarChart3 className="w-8 h-8 text-pink-500" />
-        </div>
-        <h1 className="text-3xl font-bold text-slate-50 mb-2">BrightHouse</h1>
-        <p className="text-slate-400 mb-8">Operations & Strategy Dashboard</p>
-        <button 
-          onClick={handleLogin}
-          className="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-3"
-        >
-          <img src="https://www.google.com/favicon.ico" className="w-5 h-5 brightness-0 invert" alt="Google" />
-          Sign in with Google
-        </button>
-      </motion.div>
     </div>
   );
 
@@ -307,13 +272,10 @@ export default function App() {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/5">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-all w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sign Out</span>
-          </button>
+          <div className="flex items-center gap-3 px-4 py-3 text-slate-500 text-xs">
+            <Shield className="w-4 h-4" />
+            <span>Internal Access Mode</span>
+          </div>
         </div>
       </aside>
 
@@ -327,10 +289,10 @@ export default function App() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{user.displayName}</p>
-              <p className="text-xs text-slate-400">{user.email}</p>
+              <p className="text-sm font-medium">{mockUser.displayName}</p>
+              <p className="text-xs text-slate-400">{mockUser.email}</p>
             </div>
-            <img src={user.photoURL || ''} className="w-10 h-10 rounded-xl border border-white/10" alt="Avatar" />
+            <img src={mockUser.photoURL} className="w-10 h-10 rounded-xl border border-white/10" alt="Avatar" />
           </div>
         </header>
 
@@ -510,7 +472,7 @@ export default function App() {
                       <input 
                         type="text" 
                         value={profile.companyName}
-                        onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { companyName: e.target.value })}
+                        onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { companyName: e.target.value })}
                         className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition-all"
                       />
                     </div>
@@ -519,7 +481,7 @@ export default function App() {
                         <label className="block text-sm font-medium text-slate-400 mb-2">Modeling Mode</label>
                         <select 
                           value={profile.modelingMode}
-                          onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { modelingMode: e.target.value })}
+                          onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { modelingMode: e.target.value })}
                           className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition-all"
                         >
                           <option value="granular">Granular</option>
@@ -530,7 +492,7 @@ export default function App() {
                         <label className="block text-sm font-medium text-slate-400 mb-2">Billing Cycle</label>
                         <select 
                           value={profile.billingCycle}
-                          onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { billingCycle: e.target.value })}
+                          onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { billingCycle: e.target.value })}
                           className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition-all"
                         >
                           <option value="monthly">Monthly</option>
@@ -544,7 +506,7 @@ export default function App() {
                         <input 
                           type="color" 
                           value={profile.brandColor}
-                          onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { brandColor: e.target.value })}
+                          onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { brandColor: e.target.value })}
                           className="w-12 h-12 bg-transparent border-none cursor-pointer"
                         />
                         <span className="font-mono text-sm">{profile.brandColor}</span>
@@ -561,7 +523,7 @@ export default function App() {
                       <input 
                         type="number" 
                         value={profile.weeksPerYear}
-                        onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { weeksPerYear: Number(e.target.value) })}
+                        onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { weeksPerYear: Number(e.target.value) })}
                         className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition-all"
                       />
                     </div>
@@ -570,7 +532,7 @@ export default function App() {
                       <input 
                         type="number" 
                         value={profile.targetMarginFloor}
-                        onChange={(e) => updateDoc(doc(db, 'profiles', user.uid), { targetMarginFloor: Number(e.target.value) })}
+                        onChange={(e) => updateDoc(doc(db, 'profiles', DEFAULT_USER_ID), { targetMarginFloor: Number(e.target.value) })}
                         className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition-all"
                       />
                     </div>
