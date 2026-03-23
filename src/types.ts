@@ -1,58 +1,51 @@
-export type ModelingMode = 'granular' | 'executive';
 export type BillingCycle = 'monthly' | 'yearly';
-export type Formation = 'LLC' | 'S-Corp';
-export type ThemeMode = 'light' | 'dark' | 'system';
-export type ContractorModel = 'Flat Rate' | 'Revenue Share' | 'Hybrid';
+export type PhotoVendor = 'autohdr' | 'fotello' | 'manual';
+export type VideoVendor = 'videotour' | 'autoreel' | 'amplifiles';
+export type LaborModel = 'flat' | 'percent' | 'hybrid';
+export type EntityFormation = 'llc' | 'scorp';
 
-export interface Profile {
-  id?: string;
+export interface Branding {
   companyName: string;
   brandColor: string;
-  modelingMode: ModelingMode;
-  billingCycle: BillingCycle;
-  formation: Formation;
-  themeMode: ThemeMode;
-  weeksPerYear: number;
-  daysPerWeek: number;
-  imagesPerShoot: number;
-  photoVendor: string;
-  videoVendor: string;
-  manualPhotoCost: number;
-  targetMarginFloor: number;
-  ownerUid: string;
+  logoUrl: string;
 }
 
-export interface Package {
-  id?: string;
-  profileId: string;
+export interface PackageTier {
   name: string;
   price: number;
   orders: number;
 }
 
 export interface Upsell {
-  id?: string;
-  profileId: string;
   name: string;
   price: number;
   count: number;
 }
 
 export interface Contractor {
-  id?: string;
-  profileId: string;
+  id: string;
   name: string;
   share: number;
-  model: ContractorModel;
+  model: LaborModel;
   flatRate: number;
   percentRate: number;
   hybridBase: number;
   hybridVideoBonus: number;
 }
 
-export interface DashboardStats {
-  totalRevenue: number;
-  totalContractorCost: number;
-  grossMargin: number;
-  marginPercentage: number;
+export interface Financials {
+  grossRevenue: number;
+  cogsPhoto: number;
+  cogsVideo: number;
+  cogsPlatform: number;
+  cogsLabor: number;
+  totalCOGS: number;
+  grossProfit: number;
+  opex: number;
+  ebitda: number;
+  tax: number;
+  netIncome: number;
+  margin: number;
+  founderLoad: number;
+  healthScore: number;
 }
