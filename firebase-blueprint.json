@@ -1,0 +1,84 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "Profile",
+      "description": "User business profile and global modeling settings.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "brandColor": { "type": "string" },
+        "modelingMode": { "type": "string", "enum": ["granular", "executive"] },
+        "billingCycle": { "type": "string", "enum": ["monthly", "yearly"] },
+        "formation": { "type": "string", "enum": ["LLC", "S-Corp"] },
+        "themeMode": { "type": "string", "enum": ["light", "dark", "system"] },
+        "weeksPerYear": { "type": "number" },
+        "daysPerWeek": { "type": "number" },
+        "imagesPerShoot": { "type": "number" },
+        "photoVendor": { "type": "string" },
+        "videoVendor": { "type": "string" },
+        "manualPhotoCost": { "type": "number" },
+        "targetMarginFloor": { "type": "number" },
+        "ownerUid": { "type": "string" }
+      },
+      "required": ["companyName", "ownerUid"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Core service packages.",
+      "type": "object",
+      "properties": {
+        "profileId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "orders": { "type": "number" }
+      },
+      "required": ["profileId", "name", "price"]
+    },
+    "Upsell": {
+      "title": "Upsell",
+      "description": "Standard add-ons and upsells.",
+      "type": "object",
+      "properties": {
+        "profileId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "count": { "type": "number" }
+      },
+      "required": ["profileId", "name", "price"]
+    },
+    "Contractor": {
+      "title": "Contractor",
+      "description": "Labor management for photographers and editors.",
+      "type": "object",
+      "properties": {
+        "profileId": { "type": "string" },
+        "name": { "type": "string" },
+        "share": { "type": "number" },
+        "model": { "type": "string", "enum": ["Flat Rate", "Revenue Share", "Hybrid"] },
+        "flatRate": { "type": "number" },
+        "percentRate": { "type": "number" },
+        "hybridBase": { "type": "number" },
+        "hybridVideoBonus": { "type": "number" }
+      },
+      "required": ["profileId", "name", "model"]
+    }
+  },
+  "firestore": {
+    "/profiles/{profileId}": {
+      "schema": "Profile",
+      "description": "User business profiles."
+    },
+    "/profiles/{profileId}/packages/{packageId}": {
+      "schema": "Package",
+      "description": "Service packages for a profile."
+    },
+    "/profiles/{profileId}/upsells/{upsellId}": {
+      "schema": "Upsell",
+      "description": "Upsells for a profile."
+    },
+    "/profiles/{profileId}/contractors/{contractorId}": {
+      "schema": "Contractor",
+      "description": "Contractors for a profile."
+    }
+  }
+}
